@@ -10,7 +10,7 @@
   --brand:#0e6b4f; --brand-dk:#0b5a43; --ink:#26241f; --sub:#8a877f;
   --bg:#f3f2ef; --card:#ffffff; --line:#e8e6e0; --line2:#efede8;
   --open-bg:#e2f1e2; --open-tx:#1f6b34; --mid-bg:#e1e9f8; --mid-tx:#2b57b0;
-  --close-bg:#fbe6d8; --close-tx:#a04a1e; --leave-bg:#fbdfe2; --leave-tx:#b3323f;
+  --close-bg:#fbe6d8; --close-tx:#a04a1e; --pm-bg:#efe6f7; --pm-tx:#6a3ba8; --leave-bg:#fbdfe2; --leave-tx:#b3323f;
   --warn:#e8964a; --red:#c0392b; --green:#188a55; --gold:#8a6d1d; --gold-bg:#f6ecc9;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -62,6 +62,7 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .bg-open{background:var(--brand);color:#fff}
 .bg-mid{background:#3b6fd4;color:#fff}
 .bg-close{background:#b4532a;color:#fff}
+.bg-pm{background:#7a4fb8;color:#fff}
 .bg-shift{background:#6b6862;color:#fff}
 .st-run{background:var(--brand);color:#fff}
 .st-prep{background:#eceae4;color:#6b6862}
@@ -73,6 +74,9 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .tag.jp{background:#f8f0d8;color:#8a6d1d}
 .tag.cn{background:#fbe4e4;color:#b3323f}
 .tag.pharm{background:#e6eef8;color:#2b57b0}
+.tag.mgr{background:#dce9f8;color:#1d4788;font-weight:700}
+.tag.pt{background:#eef3fb;color:#5a7fc0}
+.tag.log{background:#e7f0e7;color:#2f6b3a}
 .tag.warn{background:var(--gold-bg);color:var(--gold)}
 .pos{color:var(--green);font-weight:700}
 .neg{color:var(--red);font-weight:700}
@@ -102,8 +106,19 @@ select.cell{border:1px solid var(--line);border-radius:7px;padding:4px 6px;font-
 select.cell.v-open{background:var(--open-bg);color:var(--open-tx);border-color:#cfe6cf}
 select.cell.v-mid{background:var(--mid-bg);color:var(--mid-tx);border-color:#cbd8f0}
 select.cell.v-close{background:var(--close-bg);color:var(--close-tx);border-color:#f2d5bd}
+select.cell.v-pm{background:var(--pm-bg);color:var(--pm-tx);border-color:#ddc9f0}
+select.cell.v-pmc{background:#f7d0bd;color:#8a3a12;border-color:#eebd9d}
+select.cell.ew{border-style:dashed;border-width:1.5px}
 select.cell.v-leave{background:var(--leave-bg);color:var(--leave-tx);border-color:#f2c3c8}
 select.cell.chg{outline:2px solid var(--warn);outline-offset:1px}
+.chip{display:inline-block;padding:1px 8px;border-radius:7px;font-size:12px;font-weight:600;margin:1.5px 2px;white-space:nowrap;background:#f0eee8;color:#4c4a44}
+.chip.v-open{background:var(--open-bg);color:var(--open-tx)}
+.chip.v-pm{background:var(--pm-bg);color:var(--pm-tx)}
+.chip.v-mid{background:var(--mid-bg);color:var(--mid-tx)}
+.chip.v-close{background:var(--close-bg);color:var(--close-tx)}
+.chip.v-pmc{background:#f7d0bd;color:#8a3a12;font-weight:700}
+.chip.v-leave{background:var(--leave-bg);color:var(--leave-tx)}
+.tdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px}
 input.remark{border:1px solid transparent;border-radius:7px;padding:4px 8px;width:100%;min-width:180px;background:transparent;font-size:12.5px}
 input.remark:hover{border-color:var(--line)}
 input.remark:focus{border-color:var(--brand);outline:0;background:#fff}
@@ -249,36 +264,176 @@ const HOLIDAYS = {
 };
 
 /* ---- 직무 탭 ---- */
-const JOBS = ["약사","일본","중국"];
-const JOB_OF = e => e.job === "약무" ? "약사" : (e.team === "중국어" ? "중국" : "일본");
-const NO_BASE = { "약사":10000, "일본":20000, "중국":30000 };
+const JOBS = ["약사","일본","중국","물류"];
+const JOB_LIST = ["관리약사","정규약사","파트약사","일본팀","중국팀","물류팀"];
+const JOB_OF = e => ({관리약사:"약사",정규약사:"약사",파트약사:"약사",일본팀:"일본",중국팀:"중국",물류팀:"물류"})[e.job] || "약사";
+const NO_BASE = { "약사":10000, "일본":20000, "중국":30000, "물류":40000 };
 
 /* ---- 기본 근무시간 (직무별 · 근무표 페이지에서 수정 가능) ---- */
 const DEFAULT_SHIFTS = () => ({
-  "약사":[ {k:"open",label:"오픈",s:"10:00",e:"19:00",b:14},
-           {k:"mid", label:"미들",s:"12:00",e:"21:00",b:18},
-           {k:"close",label:"마감",s:"14:00",e:"23:00",b:19} ],
-  "일본":[ {k:"open",label:"오픈",s:"10:00",e:"19:00",b:14},
-           {k:"mid", label:"미들",s:"12:00",e:"21:00",b:18},
-           {k:"close",label:"마감",s:"14:00",e:"23:00",b:19} ],
-  "중국":[ {k:"open",label:"오픈",s:"10:00",e:"19:00",b:14},
-           {k:"mid", label:"미들",s:"12:00",e:"21:00",b:18},
-           {k:"close",label:"마감",s:"14:00",e:"23:00",b:19} ]
+  "약사":[ {k:"open",   label:"오픈조",   s:"10:00",e:"20:00",b:null},
+           {k:"pm",     label:"오후조",   s:"13:00",e:"23:00",b:null},
+           {k:"mid",    label:"중간조",   s:"11:00",e:"23:00",b:null},
+           {k:"close",  label:"마감조",   s:"18:00",e:"24:30",b:null},
+           {k:"pmclose",label:"오후+마감",s:"13:00",e:"24:30",b:null} ],
+  "일본":[ {k:"open",   label:"오픈조",   s:"10:00",e:"20:00",b:null},
+           {k:"open2",  label:"오픈조2",  s:"10:00",e:"19:00",b:null},
+           {k:"pm",     label:"오후조",   s:"13:00",e:"23:00",b:null},
+           {k:"close",  label:"마감조",   s:"17:00",e:"24:30",b:null},
+           {k:"pmclose",label:"오후+마감",s:"13:00",e:"24:30",b:null} ],
+  "중국":[ {k:"open",   label:"오픈조",   s:"10:00",e:"20:00",b:null},
+           {k:"pm",     label:"오후조",   s:"13:00",e:"23:00",b:null},
+           {k:"pm2",    label:"오후조2",  s:"12:00",e:"22:00",b:null},
+           {k:"mid",    label:"중간조",   s:"11:00",e:"23:00",b:null},
+           {k:"pmclose",label:"오후+마감",s:"13:00",e:"24:30",b:null} ],
+  "물류":[ {k:"open", label:"오픈조",s:"10:00",e:"20:00",b:null},
+           {k:"pm",   label:"오후조",s:"13:00",e:"23:00",b:null},
+           {k:"mid",  label:"중간조",s:"11:00",e:"23:00",b:null},
+           {k:"close",label:"마감조",s:"18:00",e:"24:30",b:null} ]
 });
 
 const EMP_COLORS = ["#f5d97e","#a8d5a2","#a9c7ee","#f5b8a3","#d9d9d9","#c9b8e8","#9fd8d0","#f0a8c0","#e0cba8","#b8c9e8"];
+
+/* ---- 초기 데이터: 약사 근무스케줄 (2026-08-30 기준, 9/1 시행) ---- */
+const SEED_EMPLOYEES=[
+ {id:"p01",no:10001,name:"윤다영",job:"관리약사",team:null,emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"p02",no:10002,name:"김서우",job:"관리약사",team:null,emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"p03",no:10003,name:"김대영",job:"정규약사",team:null,emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"p04",no:10004,name:"곽근용",job:"정규약사",team:null,emp:"주5",joinDate:"2026-09-14",leaveDate:null},
+ {id:"p05",no:10005,name:"우연주",job:"정규약사",team:null,emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"p06",no:10006,name:"정동한",job:"정규약사",team:null,emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"p07",no:10007,name:"이지원",job:"정규약사",team:null,emp:"주5",joinDate:"2026-09-22",leaveDate:null},
+ {id:"pt1",no:10008,name:"변예준",job:"파트약사",team:null,emp:"파트",joinDate:"2026-09-19",leaveDate:null},
+ {id:"pt2",no:10009,name:"권나희",job:"파트약사",team:null,emp:"파트",joinDate:"2026-09-12",leaveDate:null},
+ {id:"pt3",no:10010,name:"박종현",job:"파트약사",team:null,emp:"파트",joinDate:"2026-09-20",leaveDate:null},
+ {id:"pt4",no:10011,name:"이아영",job:"파트약사",team:null,emp:"파트",joinDate:"2026-09-13",leaveDate:null},
+ {id:"pt5",no:10012,name:"제선영",job:"파트약사",team:null,emp:"파트",joinDate:"2026-09-27",leaveDate:null},
+ {id:"pt6",no:10013,name:"전예나",job:"파트약사",team:null,emp:"파트",joinDate:"2026-09-13",leaveDate:null},
+ {id:"pt7",no:10014,name:"김구민",job:"파트약사",team:null,emp:"파트",joinDate:"2026-09-12",leaveDate:null},
+ {id:"pt8",no:10015,name:"차재혁",job:"파트약사",team:null,emp:"파트",joinDate:"2026-09-13",leaveDate:null}
+];
+/* 요일: 0월 1화 2수 3목 4금 5토 6일 · 격주 파트는 매주로 넣고 출근부에서 해당 없는 주만 – 로 조정 */
+const SEED_PATTERN={
+ p01:{0:"pm",1:"open",2:"open",3:"open",6:"pm"},
+ p02:{1:"pm",2:"pmclose",3:"pm",4:"open",5:"open"},
+ p03:{0:"open",2:"pm",3:"pmclose",4:"pm",5:"open"},
+ p04:{0:"open",1:"open",3:"pm",4:"pmclose",5:"pm"},
+ p05:{0:"open",2:"open",3:"open",4:"pm",5:"pmclose"},
+ p06:{0:"pm",1:"pmclose",3:"open",4:"open",6:"pmclose"},
+ p07:{0:"pmclose",1:"pm",2:"pm",4:"open",6:"open"},
+ pt1:{5:"W13|close"},pt2:{5:"W24|close"},  /* 토 마감: 변예준 1·3주차 / 권나희 2·4주차 */
+ pt3:{6:"W13|open"}, pt4:{6:"W24|open"},   /* 일 오픈: 박종현 1·3주차 / 이아영 2·4주차 */
+ pt5:{6:"W41|mid"},  pt6:{6:"W23|mid"},    /* 일 중간: 제선영 4·1주차 / 전예나 2·3주차 (2주씩 교대) */
+ pt7:{5:"mid"},pt8:{6:"close"}             /* 김구민 매주 토 중간 / 차재혁 매주 일 마감 */
+};
+
+
+/* ---- 일본 통역 (근무스케줄_일본팀_260824 기준) ---- */
+const SEED_EMP_JP=[
+ {id:"j01",no:20001,name:"나가시마 아유",job:"일본팀",team:"일본어",emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"j02",no:20002,name:"홍다희",job:"일본팀",team:"일본어",emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"j03",no:20003,name:"아와이 미쿠",job:"일본팀",team:"일본어",emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"j04",no:20004,name:"이재하",job:"일본팀",team:"일본어",emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"j05",no:20005,name:"김지율",job:"일본팀",team:"일본어",emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"j06",no:20006,name:"후루세 히나",job:"일본팀",team:"일본어",emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"jp1",no:20007,name:"강지혜",job:"일본팀",team:"일본어",emp:"파트",joinDate:"2026-09-01",leaveDate:null},
+ {id:"jp2",no:20008,name:"사쿠마 유나",job:"일본팀",team:"일본어",emp:"파트",joinDate:"2026-09-01",leaveDate:null}
+];
+const SEED_PAT_JP={
+ j01:{0:"pmclose",3:"open",4:"open",5:"open",6:"pm"},
+ j02:{0:"open",1:"open",2:"open",4:"pm",5:"pm"},
+ j03:{0:"open2",2:"open2",3:"open2",4:"open2",6:"close"},
+ j04:{0:"open",1:"open",3:"pm",4:"pm",5:"pmclose"},
+ j05:{0:"pm",1:"pm",2:"pm",4:"open",6:"open"},
+ j06:{1:"pmclose",2:"pmclose",3:"pmclose",4:"pmclose",5:"open"},
+ jp1:{5:"open",6:"pmclose"},
+ jp2:{5:"pmclose",6:"open"}
+};
+/* ---- 중국 통역 (중국팀_근무스케줄_260826_ver2 기준) ---- */
+const SEED_EMP_CN=[
+ {id:"c01",no:30001,name:"신명숙",job:"중국팀",team:"중국어",emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"c02",no:30002,name:"황영금",job:"중국팀",team:"중국어",emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"c03",no:30003,name:"왕효예",job:"중국팀",team:"중국어",emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"c04",no:30004,name:"왕총한",job:"중국팀",team:"중국어",emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"c05",no:30005,name:"진유예",job:"중국팀",team:"중국어",emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"c06",no:30006,name:"이미령",job:"중국팀",team:"중국어",emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"c07",no:30007,name:"김세라",job:"중국팀",team:"중국어",emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"c08",no:30008,name:"이해인",job:"중국팀",team:"중국어",emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"c09",no:30009,name:"등설정",job:"중국팀",team:"중국어",emp:"주5",joinDate:"2026-09-01",leaveDate:null},
+ {id:"cp1",no:30010,name:"김영복",job:"중국팀",team:"중국어",emp:"파트",joinDate:"2026-09-01",leaveDate:null},
+ {id:"cp2",no:30011,name:"김가영",job:"중국팀",team:"중국어",emp:"파트",joinDate:"2026-09-01",leaveDate:null},
+ {id:"cp3",no:30012,name:"조형민",job:"중국팀",team:"중국어",emp:"파트",joinDate:"2026-09-01",leaveDate:null}
+];
+const SEED_PAT_CN={
+ c01:{0:"open",1:"open",4:"pm",5:"pm",6:"open"},
+ c02:{0:"open",1:"open",2:"pm",3:"pm",5:"pmclose"},
+ c03:{0:"pm",2:"open",3:"open",4:"open",6:"pmclose"},
+ c04:{0:"pm",1:"pmclose",3:"open",4:"open",6:"open"},
+ c05:{0:"open",1:"open",2:"open",4:"pmclose",6:"pm"},
+ c06:{0:"pmclose",1:"pm2",2:"pm2",4:"open",5:"open"},
+ c07:{1:"pm",2:"pmclose",3:"pmclose",4:"pm",5:"pmclose"},
+ c08:{2:"open",3:"open",4:"open",5:"pm",6:"pm"},
+ c09:{0:"pm",1:"pm",3:"pm",4:"pmclose",6:"pmclose"},
+ cp1:{5:"open"},
+ cp2:{5:"open",6:"open"},
+ cp3:{6:"mid"}
+};
 
 /* ================= 저장소 ================= */
 const DB_KEY = "mdhr_db_v1";
 let DB = null;
 function freshDB(){
   return { employees:[], patterns:[{id:uid(),name:"기본",effective:"2026-08-01",assign:{}}],
-    shifts:DEFAULT_SHIFTS(), attendance:{}, leaves:[], adjustments:[], todos:[], notices:[] };
+    shifts:DEFAULT_SHIFTS(), shiftsV5:true, attendance:{}, leaves:[], adjustments:[], todos:[], notices:[] };
 }
 function load(){
   try{ DB = JSON.parse(localStorage.getItem(DB_KEY)) || freshDB(); }
   catch(e){ DB = freshDB(); }
   if(!DB.shifts) DB.shifts = DEFAULT_SHIFTS();
+  if(!DB.shiftsV5){ DB.shifts = DEFAULT_SHIFTS(); DB.shiftsV5 = true; }  // 휴게 제거·격주 반영
+  if(!DB.shifts["물류"]) DB.shifts["물류"]=DEFAULT_SHIFTS()["물류"];
+  if(!DB.seedV2){
+    const p=DB.patterns[0];
+    if(DB.employees.length===0){ p.name="9월-1"; p.effective="2026-09-01"; }
+    const addTeam=(key,emps,assign)=>{           // 해당 팀 직원이 하나도 없을 때만 시드
+      if(DB.employees.some(e=>JOB_OF(e)===key)) return;
+      DB.employees.push(...JSON.parse(JSON.stringify(emps)));
+      p.assign[key]=JSON.parse(JSON.stringify(assign));
+    };
+    addTeam("약사",SEED_EMPLOYEES,SEED_PATTERN);
+    addTeam("일본",SEED_EMP_JP,SEED_PAT_JP);
+    addTeam("중국",SEED_EMP_CN,SEED_PAT_CN);
+    DB.seedV1=true; DB.seedV2=true; save();
+  }
+  if(!DB.biV1){   // 격주 도입: 기존 시드의 약사 격주 파트 6명 전환
+    const bi={pt1:[5,"W13|close"],pt2:[5,"W24|close"],pt3:[6,"W13|open"],pt4:[6,"W24|open"],pt5:[6,"W41|mid"],pt6:[6,"W23|mid"]};
+    DB.patterns.forEach(pt=>{ const a=pt.assign?.["약사"]; if(!a) return;
+      for(const id in bi){ const[wd,v]=bi[id]; if(a[id] && typeof a[id][wd]==="string" && !a[id][wd].includes("|")) a[id][wd]=v; } });
+    DB.biV1=true; save();
+  }
+  if(!DB.calV1){  // 파트약사 캘린더(260830) 반영: A/B → 주차 표기, 순환·첫 근무일 갱신
+    DB.patterns.forEach(pt=>{ for(const j in pt.assign||{}) for(const id in pt.assign[j]) for(const wd in pt.assign[j][id]){
+      const v=pt.assign[j][id][wd];
+      if(typeof v==="string"){
+        if(v.startsWith("A|")) pt.assign[j][id][wd]="W13|"+v.slice(2);
+        else if(v.startsWith("B|")) pt.assign[j][id][wd]="W24|"+v.slice(2);
+      } } });
+    const fix={pt5:[6,"W41|mid"],pt6:[6,"W23|mid"]};
+    DB.patterns.forEach(pt=>{ const a=pt.assign?.["약사"]; if(!a) return;
+      for(const id in fix){ const[wd,v]=fix[id]; if(a[id]) a[id][wd]=v; } });
+    const jd={pt1:"2026-09-19",pt2:"2026-09-12",pt3:"2026-09-20",pt4:"2026-09-13",
+              pt5:"2026-09-27",pt6:"2026-09-13",pt7:"2026-09-12",pt8:"2026-09-13"};
+    DB.employees.forEach(e=>{ if(jd[e.id] && e.joinDate==="2026-09-01") e.joinDate=jd[e.id]; });
+    DB.calV1=true; save();
+  }
+  if(!DB.jobV1){  // 직무 6분류 전환
+    const mgr={p01:1,p02:1};
+    DB.employees.forEach(e=>{
+      if(e.job==="약무") e.job = mgr[e.id] ? "관리약사" : (e.emp==="파트" ? "파트약사" : "정규약사");
+      else if(e.job==="통역") e.job = e.team==="중국어" ? "중국팀" : "일본팀";
+    });
+    DB.jobV1=true; save();
+  }
   ["employees","patterns","leaves","adjustments","todos","notices"].forEach(k=>{ if(!DB[k]) DB[k]= k==="patterns"?freshDB().patterns:[]; });
   if(!DB.attendance) DB.attendance = {};
 }
@@ -338,17 +493,34 @@ function patternValue(pat,job,empId,wd){
   if(!pat||!pat.assign||!pat.assign[job]||!pat.assign[job][empId]) return "";
   return pat.assign[job][empId][wd] ?? "";
 }
+/* 4주 순환: 2026-08-31(월)이 속한 주 = 1주차, 이후 2→3→4→1 반복
+   격주는 1·3주차 / 2·4주차, 2주씩 교대는 2·3주차 / 4·1주차로 표현 */
+const CYCLE_ANCHOR = new Date("2026-08-31T00:00:00");
+const CYCLES = [["13","1·3주차"],["24","2·4주차"],["23","2·3주차"],["41","4·1주차"]];
+function weekNum(ds){
+  const dd=Math.floor((new Date(ds+"T00:00:00")-CYCLE_ANCHOR)/604800000);
+  return ((dd%4)+4)%4+1;
+}
+function isBi(v){ return typeof v==="string" && v.includes("|"); }
+function resolvePV(pat,job,empId,ds){   // 정규표 값을 실제 날짜 기준으로 해석 (순환 주차 반영)
+  const v=patternValue(pat,job,empId,wdIdx(ds));
+  if(isBi(v)){ const[ph,k]=v.split("|");
+    return ph.replace("W","").includes(String(weekNum(ds))) ? k : ""; }
+  return v;
+}
 function cellLabel(job,v){
   if(!v) return "–";
+  if(isBi(v)){ const[ph,k]=v.split("|"); const d=shiftDef(job,k); return `${ph.replace("W","").split("").join("·")}주차·${d?d.label:k}`; }
   if(v==="leave") return "연차";
   if(typeof v==="object") return `${v.s}~${v.e}`;
   const d=shiftDef(job,v); return d? d.label : "–";
 }
 function cellClass(v){
   if(!v) return "";
+  if(isBi(v)) return cellClass(v.split("|")[1])+" ew";
   if(v==="leave") return "v-leave";
   if(typeof v==="object") return "v-mid";
-  return v==="open"?"v-open":v==="mid"?"v-mid":"v-close";
+  return (v==="open"||v==="open2")?"v-open":(v==="pm"||v==="pm2")?"v-pm":v==="mid"?"v-mid":v==="pmclose"?"v-pmc":"v-close";
 }
 function sameVal(a,b){
   if(typeof a==="object"||typeof b==="object") return JSON.stringify(a||"")===JSON.stringify(b||"");
@@ -406,7 +578,7 @@ function todayCellValue(e){
   const day=Number(ds.slice(8));
   const cells=DB.attendance[ym]?.[job]?.cells?.[e.id];
   if(cells && cells[day]!==undefined && cells[day]!==null) return cells[day];
-  return patternValue(patternForDate(ds),job,e.id,wdIdx(ds));   // 출근부 미입력 시 정규표 기준
+  return resolvePV(patternForDate(ds),job,e.id,ds);   // 출근부 미입력 시 정규표 기준(격주 반영)
 }
 function rDash(){
   const ds=todayStr();
@@ -418,10 +590,10 @@ function rDash(){
     let label,cls;
     if(typeof v==="object"){ label=`${v.s}~${v.e}`; cls="bg-shift"; }
     else{ const d=shiftDef(job,v); if(!d) return; label=d.label;
-      cls=v==="open"?"bg-open":v==="mid"?"bg-mid":"bg-close"; }
+      cls=(v==="open"||v==="open2")?"bg-open":(v==="pm"||v==="pm2")?"bg-pm":v==="mid"?"bg-mid":(v==="close"||v==="pmclose")?"bg-close":"bg-shift"; }
     (groups[label] ||= {cls,names:[]}).names.push(e.name);
   });
-  const order=["오픈","미들","마감"];
+  const order=[...new Set(JOBS.flatMap(j=>shiftsOf(j).map(x=>x.label)))];
   const keys=Object.keys(groups).sort((a,b)=>{
     const ia=order.indexOf(a), ib=order.indexOf(b);
     return (ia<0?99:ia)-(ib<0?99:ib) || a.localeCompare(b);
@@ -494,12 +666,105 @@ function attMonth(ym,job){
   return DB.attendance[ym][job];
 }
 function rAttend(){
-  const ym=S.attendYM, job=S.attendJob;
+  const ym=S.attendYM;
+  if(S.attendView===undefined) S.attendView="sum";
+  const sum=S.attendView==="sum";
+  if(!sum && S.attendJob==="전체") S.attendJob="약사";
+  const job=S.attendJob;
+  const n=daysInMonth(ym);
+
+  const head=`
+  <h1 class="page-title">출근부</h1>
+  <div class="page-sub">${sum
+    ? "날짜별 근무 인원 요약 · 출근부 미입력 칸은 정규 근무표(격주·순환 반영) 기준으로 표시됩니다"
+    : "정규 근무표 + 변경사항 반영한 실제 근무표 · <b>변경사항은 자동 저장됩니다</b> (정규표와 다른 칸은 주황 테두리 · 격주·순환 배정은 해당 주차만 채워짐 · 이번 주 ${weekNum(todayStr())}주차)"}</div>
+  <div class="row mt14">
+    <button class="iconbtn" onclick="S.attendYM=shiftYM(S.attendYM,-1);render()">◀</button>
+    <b style="font-size:17px">${fmtYMK(ym)}</b>
+    <button class="iconbtn" onclick="S.attendYM=shiftYM(S.attendYM,1);render()">▶</button>
+    <div class="tabs" style="margin-left:4px">
+      <button class="${sum?"on":""}" onclick="S.attendView='sum';render()">한눈에 보기</button>
+      <button class="${sum?"":"on"}" onclick="S.attendView='edit';render()">편집</button>
+    </div>
+    ${sum?"":`<button class="btn" onclick="attFill()">정규 근무표로 채우기</button>
+    <button class="btn" onclick="attClear()">이 달 비우기</button>`}
+  </div>`;
+
+  /* ---------- 한눈에 보기 ---------- */
+  if(sum){
+    const jobs = job==="전체" ? JOBS : [job];
+    const dotColor={ "약사":"#2b57b0","일본":"#c9a227","중국":"#d4636f","물류":"#3f8a4f" };
+    const chipCls=v=>{
+      if(v==="leave") return "v-leave";
+      if(typeof v==="object") return "v-mid";
+      return (v==="open"||v==="open2")?"v-open":(v==="pm"||v==="pm2")?"v-pm":v==="mid"?"v-mid":v==="pmclose"?"v-pmc":"v-close";
+    };
+    const bucketOf=(j,v)=>{
+      if(v==="leave") return "연차";
+      if(typeof v==="object"){ const h=toH(v.s); return h<12?"오픈":h<16?"오후":"마감"; }
+      if(v==="open"||v==="open2") return "오픈";
+      if(v==="pm"||v==="pm2") return "오후";
+      if(v==="mid") return "중간";
+      return "마감";
+    };
+    const BUCKETS=["오픈","오후","중간","마감","연차"];
+    const rows=[];
+    for(let d=1;d<=n;d++){
+      const ds=dateStr(ym,d), dow=dowOf(ds), holi=HOLIDAYS[ds];
+      const by={ "오픈":[], "오후":[], "중간":[], "마감":[], "연차":[] };
+      let workCnt=0;
+      jobs.forEach(j=>{
+        jobEmployees(j,ym).forEach(e=>{
+          if(!activeOnDate(e,ds)) return;
+          const cells=DB.attendance[ym]?.[j]?.cells?.[e.id];
+          let v=cells?.[d];
+          if(v===undefined) v=resolvePV(patternForDate(ds),j,e.id,ds);
+          if(!v) return;
+          if(v!=="leave") workCnt++;
+          by[bucketOf(j,v)].push(
+            `<span class="chip ${chipCls(v)}">${job==="전체"?`<i class="tdot" style="background:${dotColor[j]}"></i>`:""}${esc(e.name)}${typeof v==="object"?` ${v.s}~${v.e}`:""}${v==="pmclose"?" ★":""}</span>`);
+        });
+      });
+      const remarks=jobs.map(j=>{
+        const r=DB.attendance[ym]?.[j]?.remarks?.[d];
+        return r? (job==="전체"?`<span class="tag" style="margin-right:3px">${j}</span>${esc(r)}`:esc(r)) : "";
+      }).filter(Boolean).join("<br>");
+      rows.push(`<tr class="${holi||dow===0?"holi":""}${dow===6?" wend":""}">
+        <td class="c daycell" style="white-space:nowrap">${d}일 ${holi?"●":""}</td>
+        <td class="c daycell" style="color:${dow===0||holi?"var(--red)":dow===6?"#2b57b0":"inherit"}">${DOW[dow]}</td>
+        ${BUCKETS.map(bk=>`<td>${by[bk].join("")}</td>`).join("")}
+        <td class="c"><b>${workCnt||"–"}</b></td>
+        <td class="small" style="color:#57554f">${remarks}</td>
+      </tr>`);
+    }
+    return head+`
+    <div class="row mt14">
+      <div class="tabs">${["전체",...JOBS].map(j=>`<button class="${j===job?"on":""}" onclick="S.attendJob='${j}';render()">${j}</button>`).join("")}</div>
+      <div class="legend" style="margin-left:6px">
+        <span><i style="background:var(--open-bg)"></i>오픈</span>
+        <span><i style="background:var(--pm-bg)"></i>오후</span>
+        <span><i style="background:var(--mid-bg)"></i>중간</span>
+        <span><i style="background:var(--close-bg)"></i>마감</span>
+        <span>★ 마감 담당(~24:30)</span>
+        <span><i style="background:var(--leave-bg)"></i>연차</span>
+        ${job==="전체"?JOBS.map(j=>`<span><i class="tdot" style="background:${dotColor[j]};border-radius:50%"></i>${j}</span>`).join(""):""}
+      </div>
+    </div>
+    <div class="tblwrap mt14">
+      <table class="tbl">
+        <thead><tr><th class="c">날짜</th><th class="c">요일</th>
+          <th style="min-width:150px">오픈</th><th style="min-width:150px">오후</th>
+          <th style="min-width:110px">중간</th><th style="min-width:150px">마감</th>
+          <th style="min-width:90px">연차</th><th class="c">계</th><th style="min-width:140px">비고</th></tr></thead>
+        <tbody>${rows.join("")}</tbody>
+      </table>
+    </div>`;
+  }
+
+  /* ---------- 편집 보기 ---------- */
   const emps=jobEmployees(job,ym);
   const m=attMonth(ym,job);
-  const n=daysInMonth(ym);
   const sdefs=shiftsOf(job);
-
   const rows=[];
   for(let d=1;d<=n;d++){
     const ds=dateStr(ym,d), dow=dowOf(ds), holi=HOLIDAYS[ds];
@@ -507,11 +772,11 @@ function rAttend(){
     const tds=emps.map(e=>{
       if(!activeOnDate(e,ds)) return `<td class="c" style="background:#faf9f5"></td>`;
       const cur = m.cells[e.id]?.[d] ?? "";
-      const pv  = patternValue(pat,job,e.id,wdIdx(ds));
+      const pv  = resolvePV(pat,job,e.id,ds);
       const chg = !sameVal(cur,pv) ? " chg":"";
       const isObj = typeof cur==="object";
       const opts = [`<option value="">–</option>`]
-        .concat(sdefs.map(s=>`<option value="${s.k}" ${cur===s.k?"selected":""}>${esc(s.label)}(${s.s.slice(0,2)}시)</option>`))
+        .concat(sdefs.map(s=>`<option value="${s.k}" ${cur===s.k?"selected":""}>${esc(s.label)}(${s.s})</option>`))
         .concat([`<option value="leave" ${cur==="leave"?"selected":""}>연차</option>`]);
       if(isObj) opts.push(`<option value="__cur" selected>${cur.s}~${cur.e}</option>`);
       opts.push(`<option value="__time">시간입력…</option>`);
@@ -524,23 +789,11 @@ function rAttend(){
       <td><input class="remark" value="${esc(m.remarks[d]||"")}" onchange="attRemark(${d},this.value)"></td>
     </tr>`);
   }
-
-  return `
-  <h1 class="page-title">출근부</h1>
-  <div class="page-sub">정규 근무표 + 변경사항 반영한 실제 근무표 · <b>변경사항은 자동 저장됩니다</b> (정규표와 다른 칸은 주황 테두리)</div>
-  <div class="row mt14">
-    <button class="iconbtn" onclick="S.attendYM=shiftYM(S.attendYM,-1);render()">◀</button>
-    <b style="font-size:17px">${fmtYMK(ym)}</b>
-    <button class="iconbtn" onclick="S.attendYM=shiftYM(S.attendYM,1);render()">▶</button>
-    <button class="btn" onclick="attFill()">정규 근무표로 채우기</button>
-    <button class="btn" onclick="attClear()">이 달 비우기</button>
-  </div>
+  return head+`
   <div class="row mt14">
     <div class="tabs">${JOBS.map(j=>`<button class="${j===job?"on":""}" onclick="S.attendJob='${j}';render()">${j}</button>`).join("")}</div>
     <div class="legend" style="margin-left:6px">
-      <span><i style="background:var(--open-bg)"></i>오픈</span>
-      <span><i style="background:var(--mid-bg)"></i>미들</span>
-      <span><i style="background:var(--close-bg)"></i>마감</span>
+      ${sdefs.map(x=>`<span><i style="background:var(--${(x.k==="open"||x.k==="open2")?"open":(x.k==="pm"||x.k==="pm2")?"pm":x.k==="mid"?"mid":"close"}-bg)"></i>${esc(x.label)}</span>`).join("")}
       <span><i style="background:var(--leave-bg)"></i>연차</span>
       <span>– 휴무</span>
     </div>
@@ -582,7 +835,7 @@ function attFill(){
     m.cells[e.id]={};
     for(let d=1;d<=n;d++){
       const ds=dateStr(ym,d); if(!activeOnDate(e,ds)) continue;
-      const pv=patternValue(patternForDate(ds),job,e.id,wdIdx(ds));
+      const pv=resolvePV(patternForDate(ds),job,e.id,ds);
       if(pv) m.cells[e.id][d]=pv;
     }
   });
@@ -617,10 +870,11 @@ function rPattern(){
   /* 주간 시간표 그리드 */
   const colorOf={}; emps.forEach((e,i)=>colorOf[e.id]=EMP_COLORS[i%EMP_COLORS.length]);
   function slotOf(empId,wd){
-    const v=patternValue(pat,job,empId,wd);
+    let v=patternValue(pat,job,empId,wd), bi=false;
+    if(isBi(v)){ bi=true; v=v.split("|")[1]; }
     if(!v||v==="leave") return null;
-    if(typeof v==="object") return {s:toH(v.s),e:toH(v.e),b:(v.b??null)};
-    const d=shiftDef(job,v); return d?{s:toH(d.s),e:toH(d.e),b:d.b}:null;
+    if(typeof v==="object") return {s:toH(v.s),e:toH(v.e),b:(v.b??null),bi};
+    const d=shiftDef(job,v); return d?{s:toH(d.s),e:toH(d.e),b:d.b,bi}:null;
   }
   let grid="";
   if(emps.length){
@@ -628,13 +882,15 @@ function rPattern(){
       ["월","화","수","목","금","토","일"].map(d=>`<th class="day" colspan="${emps.length}">${d}</th>`).join("")}</tr>`;
     const head2=`<tr>${[0,1,2,3,4,5,6].map(()=>emps.map(e=>`<th class="emp">${esc(e.name)}</th>`).join("")).join("")}</tr>`;
     let body="";
-    for(let h=10;h<24;h++){
+    const _hr=sdefs.flatMap(x=>[toH(x.s),toH(x.e)]);
+    const _lo=Math.floor(Math.min(10,..._hr)), _hi=Math.ceil(Math.max(24,..._hr));
+    for(let h=_lo;h<_hi;h++){
       body+=`<tr><td class="hr">${h}~${h+1}</td>`;
       for(let wd=0;wd<7;wd++) for(const e of emps){
         const sl=slotOf(e.id,wd);
         const on = sl && (h+1)>sl.s && h<sl.e;
         const rest = on && sl.b!==null && h===sl.b;
-        body+=`<td class="slot">${on?`<div class="dot ${rest?"rest":""}" style="background:${colorOf[e.id]}"></div>`:""}</td>`;
+        body+=`<td class="slot">${on?`<div class="dot ${rest?"rest":""}" style="background:${colorOf[e.id]}${sl.bi?";opacity:.4":""}"></div>`:""}</td>`;
       }
       body+="</tr>";
     }
@@ -647,7 +903,9 @@ function rPattern(){
       const v=patternValue(pat,job,e.id,wd);
       const isObj=typeof v==="object";
       const opts=[`<option value="">–</option>`]
-        .concat(sdefs.map(s=>`<option value="${s.k}" ${v===s.k?"selected":""}>${esc(s.label)}${s.b!==null?"(휴)":""}</option>`));
+        .concat(sdefs.map(x=>`<option value="${x.k}" ${v===x.k?"selected":""}>${esc(x.label)}</option>`))
+        .concat(CYCLES.map(([c,lb])=>
+          `<optgroup label="── ${lb}만 근무">`+sdefs.map(x=>`<option value="W${c}|${x.k}" ${v==="W"+c+"|"+x.k?"selected":""}>${lb}·${esc(x.label)}</option>`).join("")+`</optgroup>`).join(""));
       if(isObj) opts.push(`<option value="__cur" selected>${v.s}~${v.e}</option>`);
       opts.push(`<option value="__time">시간입력…</option>`);
       return `<td class="c"><select class="cell ${cellClass(v)}" onchange="patSet('${e.id}',${wd},this)">${opts.join("")}</select></td>`;
@@ -655,14 +913,17 @@ function rPattern(){
     return `<tr><td><b>${esc(e.name)}</b> ${e.emp==="파트"?'<span class="muted small">파트</span>':""}</td>${cells}</tr>`;
   }).join("");
 
+  const hasRest=sdefs.some(x=>x.b!==null);
+  const hasBi=Object.values(pat.assign?.[job]||{}).some(o=>Object.values(o).some(isBi));
   const legend=emps.map(e=>`<span><i style="background:${colorOf[e.id]};border-radius:50%"></i>${esc(e.name)}</span>`).join("")
-    +`<span><i style="background:#26241f;border-radius:50%"></i>휴게</span>`;
+    +(hasRest?`<span><i style="background:#26241f;border-radius:50%"></i>휴게</span>`:"")
+    +(hasBi?`<span><i style="background:#b6b3ab;border-radius:50%;opacity:.5"></i>반투명 = 격주·순환 근무</span>`:"");
 
   return `
   <div class="row" style="justify-content:space-between">
     <div>
       <h1 class="page-title">정규 근무표</h1>
-      <div class="page-sub">직무별 정규 시간표 · 실제 출근은 출근부에서 확인(변경사항 포함) · <b>변경사항은 자동 저장됩니다</b></div>
+      <div class="page-sub">직무별 정규 시간표 · 실제 출근은 출근부에서 확인(변경사항 포함) · <b>변경사항은 자동 저장됩니다</b> · 이번 주는 <b>순환 ${weekNum(todayStr())}주차</b></div>
     </div>
     <button class="btn primary" onclick="patNew()">＋ 새 버전</button>
   </div>
@@ -685,7 +946,7 @@ function rPattern(){
       <tbody>${editRows}</tbody>
     </table>
   </div>
-  <div class="muted small mt8">파트타임은 오픈/미들/마감을 쓰거나 "시간입력"을 골라 근무·휴게 시간을 직접 넣을 수 있어요. 언제든 드롭다운으로 되돌릴 수 있어요.</div>`:""}
+  <div class="muted small mt8">격주·순환 인원은 주차 옵션(1·3주차 등)으로 배정하세요 — 4주 순환(8/31 주 = 1주차)이며 출근부를 채울 때 해당 주차에만 자동으로 들어갑니다. 격주 = 1·3 또는 2·4주차, 2주씩 교대 = 2·3 또는 4·1주차.</div>`:""}
   `;
 }
 function patSet(empId,wd,sel){
@@ -756,9 +1017,11 @@ function saveShiftSettings(){
 function leaveStat(e){
   const isH = e.emp==="주4";                        // 주4일: 시간 단위
   const m = monthsBetween(e.joinDate, todayStr());
+  const yrs = Math.floor(m/12);
+  /* 발생: 근속 1개월 경과 시마다 자동 +1 (1년 미만분 최대 11개) + 매 1년마다 15일(주4 12일) */
   let acc;
-  if(isH) acc = num(Math.min(m,11)*H4_ACCRUE + (m>=12 ? ANNUAL_4DAY*H4_PER_DAY : 0));
-  else    acc = Math.min(m,11) + (m>=12 ? ANNUAL_FULL : 0);
+  if(isH) acc = num(Math.min(m,11)*H4_ACCRUE + yrs*ANNUAL_4DAY*H4_PER_DAY);
+  else    acc = Math.min(m,11) + yrs*ANNUAL_FULL;
   const usedDays = DB.leaves.filter(l=>l.empId===e.id && l.status==="승인" && l.kind!=="기타")
     .reduce((s,l)=>s+Number(l.days||0),0);
   const used = isH ? num(usedDays*H4_PER_DAY) : usedDays;
@@ -767,16 +1030,25 @@ function leaveStat(e){
   const u = isH ? "h" : "일";
   return {m,acc,used,adj:num(adj),rest,u,isH};
 }
+function nextAccrual(e){   // 다음 자동 발생 시점과 수량
+  const m=monthsBetween(e.joinDate,todayStr()), isH=e.emp==="주4";
+  const addM=n=>{ const d=new Date(e.joinDate+"T00:00:00"); d.setMonth(d.getMonth()+n);
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+  if(m<11) return {date:addM(m+1), amt:isH? num(H4_ACCRUE)+"h" : "1일"};
+  const yrs=Math.floor(m/12);
+  return {date:addM((yrs+1)*12), amt:isH? num(ANNUAL_4DAY*H4_PER_DAY)+"h" : ANNUAL_FULL+"일"};
+}
 function empTypeLabel(e){ return e.emp==="주5"?"주5일(정규)":e.emp==="주4"?"주4일(정규)":"파트타임"; }
 function rLeave(){
   const emps=[...DB.employees].filter(e=>!e.leaveDate || e.leaveDate>=todayStr().slice(0,8)+"01")
     .sort((a,b)=>String(a.no).localeCompare(String(b.no)));
   const rows=emps.filter(e=>e.emp!=="파트").map(e=>{
     const s=leaveStat(e);
+    const na=nextAccrual(e);
     return `<tr>
       <td><b style="color:var(--brand)">${esc(e.name)}</b> <span class="muted small">${empTypeLabel(e)}</span></td>
       <td>${e.joinDate}</td><td class="c">${s.m}</td>
-      <td class="c">${s.acc}${s.u}</td><td class="c">${s.used}${s.u}</td>
+      <td class="c">${s.acc}${s.u}<div class="muted" style="font-size:11px;white-space:nowrap">다음 ${na.date.slice(5).replace("-","/")} +${na.amt}</div></td><td class="c">${s.used}${s.u}</td>
       <td class="c">${s.adj? (s.adj>0?"+":"")+s.adj+s.u : "-"}</td>
       <td class="c ${s.rest>0?"pos":s.rest<0?"neg":"neg"}">${s.rest}${s.u}</td>
       <td class="c"><button class="btn sm" onclick="openAdjust('${e.id}')">조정/내역</button></td>
@@ -865,6 +1137,7 @@ function openAdjust(empId){
   openModal(`
   <h3>${esc(e.name)} · 연차 조정/내역</h3>
   <div class="muted small">입사 ${e.joinDate} · 근속 ${s.m}개월 · 발생 ${s.acc}${s.u} · 사용 ${s.used}${s.u} · 조정 ${s.adj||0}${s.u} → 잔여 <b class="${s.rest<0?"neg":"pos"}">${s.rest}${s.u}</b></div>
+  <div class="muted small" style="margin-top:4px">근속 1개월 경과마다 자동 +1${s.isH?" ("+H4_ACCRUE+"h)":""} (1년 미만 최대 11개) · 1년마다 ${ANNUAL_FULL}일(주4 ${ANNUAL_4DAY}일) 자동 가산 · <b>다음 발생 ${nextAccrual(e).date} (+${nextAccrual(e).amt})</b></div>
   <h4 class="mt14" style="font-size:14px">조정 내역 <span class="muted small">(± ${s.isH?"시간":"일"} 단위 · 이월/포상/차감 등)</span></h4>
   <table class="tbl mt8"><tbody>
     ${adjs.map(a=>`<tr><td>${a.date}</td><td>${a.amount>0?"+":""}${a.amount}${s.u}</td><td>${esc(a.memo||"")}</td>
@@ -906,7 +1179,6 @@ function rStaff(){
   if(S.staffQ) list=list.filter(e=>e.name.includes(S.staffQ)||String(e.no).includes(S.staffQ));
   if(S.staffJob) list=list.filter(e=>e.job===S.staffJob);
   if(S.staffEmp) list=list.filter(e=>e.emp===S.staffEmp);
-  if(S.staffLang) list=list.filter(e=>e.team===S.staffLang);
   list.sort((a,b)=>String(a.no).localeCompare(String(b.no)));
   const first=ym+"-01", last=dateStr(ym,daysInMonth(ym));
 
@@ -920,7 +1192,7 @@ function rStaff(){
     return `<tr>
       <td>${esc(e.no)}</td>
       <td><b style="color:var(--brand);cursor:pointer" onclick="openStaffEdit('${e.id}')">${esc(e.name)}</b></td>
-      <td><span class="tag ${e.job==="약무"?"pharm":""}">${e.job}</span></td>
+      <td><span class="tag ${e.job==="관리약사"?"mgr":e.job==="정규약사"?"pharm":e.job==="파트약사"?"pt":e.job==="일본팀"?"jp":e.job==="중국팀"?"cn":"log"}">${e.job}</span></td>
       <td>${empTypeLabel(e)}</td>
       <td>${e.team?`<span class="tag ${e.team==="일본어"?"jp":"cn"}">${e.team}</span>`:"—"}</td>
       <td>${e.joinDate}</td>
@@ -942,12 +1214,10 @@ function rStaff(){
     <input placeholder="이름·사번 검색" value="${esc(S.staffQ)}" class="grow" style="max-width:340px;border:1px solid var(--line);border-radius:9px;padding:8px 11px"
       oninput="S.staffQ=this.value;render();this.focus();this.setSelectionRange(this.value.length,this.value.length)">
     <select onchange="S.staffJob=this.value;render()" style="border:1px solid var(--line);border-radius:9px;padding:8px">
-      <option value="">직무 전체</option><option ${S.staffJob==="약무"?"selected":""}>약무</option><option ${S.staffJob==="통역"?"selected":""}>통역</option></select>
+      <option value="">직무 전체</option>${JOB_LIST.map(j=>`<option ${S.staffJob===j?"selected":""}>${j}</option>`).join("")}</select>
     <select onchange="S.staffEmp=this.value;render()" style="border:1px solid var(--line);border-radius:9px;padding:8px">
       <option value="">고용형태 전체</option><option value="주5" ${S.staffEmp==="주5"?"selected":""}>주5일(정규)</option>
       <option value="주4" ${S.staffEmp==="주4"?"selected":""}>주4일(정규)</option><option value="파트" ${S.staffEmp==="파트"?"selected":""}>파트타임</option></select>
-    <select onchange="S.staffLang=this.value;render()" style="border:1px solid var(--line);border-radius:9px;padding:8px">
-      <option value="">언어 전체</option><option ${S.staffLang==="일본어"?"selected":""}>일본어</option><option ${S.staffLang==="중국어"?"selected":""}>중국어</option></select>
     <span class="muted small">${cnt}명 재직</span>
   </div>
   ${rows?`
@@ -957,7 +1227,7 @@ function rStaff(){
       <tbody>${rows}</tbody>
     </table>
   </div>`:`<div class="empty mt14">표시할 직원이 없습니다. <b>＋ 입사 등록</b>으로 시작하세요.</div>`}
-  <div class="muted small mt8">이름을 클릭하면 정보 수정·퇴사 처리를 할 수 있어요. 사번은 약무 1XXXX · 일본어 2XXXX · 중국어 3XXXX 로 자동 부여됩니다.</div>`;
+  <div class="muted small mt8">이름을 클릭하면 정보 수정·퇴사 처리를 할 수 있어요. 사번은 약사 1XXXX · 일본팀 2XXXX · 중국팀 3XXXX · 물류팀 4XXXX 로 자동 부여됩니다.</div>`;
 }
 function nextNo(job){
   const base=NO_BASE[job];
@@ -971,10 +1241,8 @@ function openStaffEdit(id){
   <h3>${e?"직원 정보 수정":"입사 등록"}</h3>
   <div class="grid2">
     <div class="field"><label>이름</label><input id="st_name" value="${esc(e?.name||"")}"></div>
-    <div class="field"><label>직무</label><select id="st_job" onchange="$('#st_teamwrap').style.display=this.value==='통역'?'block':'none'">
-      <option ${e?.job==="약무"?"selected":""}>약무</option><option ${e?.job==="통역"?"selected":""}>통역</option></select></div>
-    <div class="field" id="st_teamwrap" style="display:${(e?.job||"약무")==="통역"?"block":"none"}"><label>팀(언어)</label>
-      <select id="st_team"><option ${e?.team==="일본어"?"selected":""}>일본어</option><option ${e?.team==="중국어"?"selected":""}>중국어</option></select></div>
+    <div class="field"><label>직무</label><select id="st_job" onchange="if(this.value==='파트약사')$('#st_emp').value='파트'">
+      ${JOB_LIST.map(j=>`<option ${(e?.job||"정규약사")===j?"selected":""}>${j}</option>`).join("")}</select></div>
     <div class="field"><label>고용형태</label><select id="st_emp">
       <option value="주5" ${e?.emp==="주5"?"selected":""}>주5일(정규)</option>
       <option value="주4" ${e?.emp==="주4"?"selected":""}>주4일(정규)</option>
@@ -991,7 +1259,7 @@ function openStaffEdit(id){
 }
 function saveStaff(id){
   const name=$("#st_name").value.trim(); if(!name){alert("이름을 입력하세요");return;}
-  const job=$("#st_job").value, team=job==="통역"?$("#st_team").value:null;
+  const job=$("#st_job").value, team=job==="일본팀"?"일본어":job==="중국팀"?"중국어":null;
   const emp=$("#st_emp").value, join=$("#st_join").value, leave=$("#st_leave").value||null;
   let no=$("#st_no").value.trim();
   const rec = id? empById(id) : {id:uid()};
@@ -1144,6 +1412,8 @@ function importBackup(input){
 }
 function load2(){ // import 후 누락 필드 보정
   if(!DB.shifts) DB.shifts=DEFAULT_SHIFTS();
+  if(!DB.shiftsV5){ DB.shifts=DEFAULT_SHIFTS(); DB.shiftsV5=true; }
+  if(!DB.shifts["물류"]) DB.shifts["물류"]=DEFAULT_SHIFTS()["물류"];
   ["employees","patterns","leaves","adjustments","todos","notices"].forEach(k=>{ if(!DB[k]) DB[k]= k==="patterns"?freshDB().patterns:[]; });
   if(!DB.attendance) DB.attendance={};
 }
